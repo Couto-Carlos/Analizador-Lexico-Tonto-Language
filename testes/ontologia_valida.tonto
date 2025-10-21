@@ -1,0 +1,19 @@
+
+package ufes::-::-::-::inf::nemo::ontouml::uc_lif_cycle
+
+kind Person
+
+kind University {
+    name: string
+}
+
+kind Person {
+    name: string
+}
+
+material isStudentOf {
+    source student: Person [1..1]
+    target university: University [1..*]
+}
+
+instancia_pessoa1 : Person
