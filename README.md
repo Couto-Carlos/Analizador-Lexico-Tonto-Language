@@ -1,6 +1,6 @@
 # Analisador Léxico para a Linguagem TONTO (Textual Ontology Language)
 
-Projeto da disciplina de Compiladores (Período X) da [Nome da Universidade]
+Projeto da disciplina de Compiladores Sexto Período da UFERSA
 
 ## 1. Visão Geral do Projeto
 
@@ -37,3 +37,4 @@ O projeto depende apenas da biblioteca ply. Você pode instalá-la diretamente:
 ```bash
 pip install ply
 ```
+
