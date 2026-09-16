@@ -145,7 +145,6 @@ def find_column(token):
 
 SUGESTOES_ERRO = {
     ';': "Talvez você esteja querendo usar ':'.",
-    ',': "Vírgulas só podem ser usadas dentro de listas.",
     '=': "O sinal de '=' não é suportado.",
     '"': "Textos entre aspas duplas não são aceitos.",
     "'": "Textos entre aspas simples não são aceitos.",
