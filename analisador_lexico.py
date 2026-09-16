@@ -1,4 +1,3 @@
-
 import ply.lex as lex
 
 # --- Dicionário de Palavras Reservadas e Estereótipos ---
@@ -60,6 +59,8 @@ reserved = {
     'specifics': 'RESERVED_WORD', 
     'where': 'RESERVED_WORD', 
     'package': 'RESERVED_WORD',
+    'import': 'RESERVED_WORD',
+    'functional-complexes': 'RESERVED_WORD',
 
     # Tipos de Dados Nativos
     'number': 'NATIVE_TYPE', 
@@ -123,13 +124,14 @@ def t_CLASS_NAME(t):
     return t
 
 def t_RELATION_NAME(t):
-    r'[a-z][a-zA-Z_]*'
+    r'functional\-complexes|[a-z][a-zA-Z_]*'
     t.type = reserved.get(t.value, 'RELATION_NAME')
     return t
 
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
+    t.lexer.ultimo_inicio_linha = t.lexpos + len(t.value)
 
 t_ignore = ' \t'
 
@@ -137,8 +139,27 @@ def t_ignore_COMMENT(t):
     r'//.*'
     pass
 
+def find_column(token):
+    inicio_da_linha = getattr(lexer, 'ultimo_inicio_linha', 0)
+    return (token.lexpos - inicio_da_linha) + 1
+
+SUGESTOES_ERRO = {
+    ';': "Talvez você esteja querendo usar ':'.",
+    ',': "Vírgulas só podem ser usadas dentro de listas.",
+    '=': "O sinal de '=' não é suportado.",
+    '"': "Textos entre aspas duplas não são aceitos.",
+    "'": "Textos entre aspas simples não são aceitos.",
+    '-': "Hífen isolado não é aceito. Para setas, use '--<>' ou '<>--'. (A única exceção é 'functional-complexes').",
+    '.': "Ponto isolado não é válido. Use dois pontos seguidos para intervalos ('..').",
+    '_': "Nomes de variáveis ou blocos não podem começar com sublinhado ('_').",
+}
+
 def t_error(t):
-    print(f"ERRO: Caractere ilegal encontrado na Linha {t.lexer.lineno}: '{t.value[0]}'")
+    sugestao = SUGESTOES_ERRO.get(
+        t.value[0],
+        "verifique se o símbolo pertence à linguagem e, se não, exclua-o."
+    )
+    print(f"ERRO: Linha {t.lexer.lineno}: caractere inválido '{t.value[0]}'. {sugestao}")
     t.lexer.skip(1)
 
 # --- Construção do Analisador Léxico ---
