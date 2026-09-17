@@ -11,12 +11,14 @@ O objetivo deste analisador é ler um arquivo-fonte com a extensão `.tonto`, pr
 O programa é capaz de:
 * Reconhecer os tokens válidos da linguagem TONTO.
 * Ignorar espaços em branco, tabulações e comentários (`//...`).
-* Gerar uma **tabela de símbolos** formatada, listando o lexema, o tipo de token e a linha onde foi encontrado.
+* Gerar uma **tabela de símbolos** formatada, listando o lexema, o tipo de token, a linha e a coluna onde foi encontrado.
+* Gerar uma **tabela de sintese** formatada.
 * Identificar e reportar **erros léxicos** (caracteres inesperados), indicando a linha do erro.
 
 ## 2. Equipe
 
 * Carlos Eduardo Couto de Castro
+* Adriam Keven Ferreira de Sousa
 
 ## 3. Tecnologias Utilizadas
 
