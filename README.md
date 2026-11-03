@@ -40,6 +40,7 @@ O projeto depende apenas da biblioteca ply. Você pode instalá-la diretamente:
 pip install ply
 ```
 
+<<<<<<< HEAD
 ## 🗂️ Implementação da Tabela de Símbolos (Tabela de Dispersão)
 
 A tabela de símbolos foi implementada utilizando uma estrutura de **tabela de dispersão (Hash Table / Dicionários em Python)** na classe `TabelaSimbolos` (localizada no arquivo `tabela_simbolos.py`). 
@@ -55,3 +56,5 @@ self.tabela = {
     'instances': {},   # Armazena indivíduos e instâncias
     'gensets': {}      # Armazena conjuntos de generalização (taxonomias)
 }
+=======
+>>>>>>> 0a8bb0701b80807ae7c2f8a57c29ca4df7a493bd
