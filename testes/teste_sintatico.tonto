@@ -1,0 +1,27 @@
+package UniversitySystem {
+
+    kind Person {
+        name: string
+        age: number
+        active: boolean
+    }
+
+    kind Student {
+        ra: string
+        cpf: CPFDataType
+    }
+
+    kind University {
+        name: string
+    }
+
+    material isEnrolledIn {
+        student: Student
+        university: University
+    }
+
+    CPFDataType
+
+    genset Person: Student Professor
+
+}

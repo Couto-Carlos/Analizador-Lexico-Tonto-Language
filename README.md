@@ -1,6 +1,6 @@
 # Analisador Léxico para a Linguagem TONTO (Textual Ontology Language)
 
-Projeto da disciplina de Compiladores (Período X) da [Nome da Universidade]
+Projeto da disciplina de Compiladores Sexto Período da UFERSA
 
 ## 1. Visão Geral do Projeto
 
@@ -11,12 +11,14 @@ O objetivo deste analisador é ler um arquivo-fonte com a extensão `.tonto`, pr
 O programa é capaz de:
 * Reconhecer os tokens válidos da linguagem TONTO.
 * Ignorar espaços em branco, tabulações e comentários (`//...`).
-* Gerar uma **tabela de símbolos** formatada, listando o lexema, o tipo de token e a linha onde foi encontrado.
+* Gerar uma **tabela de símbolos** formatada, listando o lexema, o tipo de token, a linha e a coluna onde foi encontrado.
+* Gerar uma **tabela de sintese** formatada.
 * Identificar e reportar **erros léxicos** (caracteres inesperados), indicando a linha do erro.
 
 ## 2. Equipe
 
 * Carlos Eduardo Couto de Castro
+* Adriam Keven Ferreira de Sousa
 
 ## 3. Tecnologias Utilizadas
 
@@ -37,3 +39,19 @@ O projeto depende apenas da biblioteca ply. Você pode instalá-la diretamente:
 ```bash
 pip install ply
 ```
+
+## 🗂️ Implementação da Tabela de Símbolos (Tabela de Dispersão)
+
+A tabela de símbolos foi implementada utilizando uma estrutura de **tabela de dispersão (Hash Table / Dicionários em Python)** na classe `TabelaSimbolos` (localizada no arquivo `tabela_simbolos.py`). 
+
+A estrutura é dividida em sub-dicionários categorizados por tipo de construto da linguagem TONTO para garantir buscas, inserções e contagens com complexidade otimizada:
+
+```python
+self.tabela = {
+    'packages': {},    # Armazena os pacotes e seus escopos
+    'classes': {},     # Armazena classes, estereótipos e corpos
+    'relations': {},   # Armazena relações, atributos e alvos
+    'types': {},       # Armazena novos tipos de dados (ex: *DataType)
+    'instances': {},   # Armazena indivíduos e instâncias
+    'gensets': {}      # Armazena conjuntos de generalização (taxonomias)
+}
