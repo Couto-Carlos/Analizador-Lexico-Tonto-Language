@@ -74,12 +74,14 @@ global
 **Operações**
 
 * `put(chave, simbolo)`: insere no escopo atual; se o nome já existir ali, não insere e retorna `False`
-* `get_local(chave)`: busca apenas no escopo atual
-* `get(chave)`: busca no escopo atual e anteriores
 * `novo_escopo(nome, tipo)`: cria um escopo filho
-* `percorrer(escopo)`: percorre os símbolos armazenados, inclusive nos escopos internos
+* `percorrer(escopo)`: percorre os símbolos, inclusive os dos escopos internos
 
-Durante a análise sintática, o **parser** controla a entrada e a saída dos escopos e adiciona os elementos reconhecidos à tabela.
+**Colisões de nomes:** nomes repetidos no mesmo escopo não são sobrescritos (`put` recusa). Nomes iguais em escopos diferentes não colidem, pois cada escopo tem seu próprio `dict` (por exemplo, o atributo `name` de `Person` e o de `University`).
+
+**Uso pelo parser:** o parser mantém o `escopo_atual`. `abrir_escopo` cria e entra em um escopo filho ao reconhecer pacote, classe, relação com corpo ou enum; `fechar_escopo` volta ao escopo pai; `inserir` grava cada símbolo no escopo corrente; `resetar_escopo` retorna ao global antes de cada arquivo. O léxico não altera a tabela.
+
+**Uso na saída:** a tabela de síntese é gerada percorrendo a tabela (`percorrer`), contando e listando os símbolos por pacote e por classe. A análise é baseada na tabela de símbolos.
 
 ## 8. Tratamento de Erros
 

@@ -16,24 +16,9 @@ class TabelaSimbolos:
         self.tabela[chave] = simbolo
         return True
 
-    def get_local(self, chave):
-        """Busca apenas no escopo atual."""
-        return self.tabela.get(chave)
-
-    def get(self, chave):
-        """Busca no escopo atual e, se não achar, sobe pela cadeia 'prev'."""
-        st = self
-        while st is not None:
-            achado = st.tabela.get(chave)
-            if achado is not None:
-                return achado
-            st = st.prev
-        return None
-
     def novo_escopo(self, nome, tipo):
         """Cria um escopo filho encadeado a este."""
         return TabelaSimbolos(prev=self, nome=nome, tipo=tipo)
-
 
 def percorrer(escopo):
     """Gera todos os símbolos de um escopo e dos escopos aninhados."""
