@@ -91,27 +91,22 @@ global
 ## 9. Exemplo de Saída
 
 ```
-Analisando: testes/teste_avancado.tonto
+Analisando: testes/pessoa.tonto
 
 ============================================================
 TABELA DE SÍNTESE (CONSTRUTOS TONTO)
 ============================================================
-Pacotes: 1 | Classes: 4 | Atributos: 7
-Relações internas: 0 | externas: 1 | Tipos de dados: 2 | Enums: 0 | Gensets: 1
+Pacotes: 1 | Classes: 5 | Atributos: 4
+Relações internas: 0 | externas: 0 | Datatypes: 0 | Enums: 0 | Gensets: 0
 ------------------------------------------------------------
 
-Pacote HealthSystem (importa: UniversitySystem)  [testes/teste_avancado.tonto]
-  Classe LivingBeing [mixin]
-      atributos: name: string, birthDate: date
-  Classe Patient [kind]
-      atributos: medicalRecordNumber: string, email: string
-  Classe Doctor [kind]
-      atributos: crm: string, specialty: string
-  Classe Dose [quantity]
-      atributos: amount: number
-  Relações externas: @material MedicalConsultation { patient: Patient [1..1], doctor: Doctor [1..*] }
-  Tipos de dados: PhoneDataType, AddressDataType
-  Genset: Doctor -> GeneralPractician, Surgeon
+Pacote Pessoa  [testes/pessoa.tonto]
+  Classe Pessoa [kind]
+      atributos: nome: string [1], endereco: string [1], cpf: string [1], data_nascimento: date [1]
+  Classe Crianca [phase] especializa Pessoa
+  Classe Adolescente [phase] especializa Pessoa
+  Classe Adulto [phase] especializa Pessoa
+  Classe Idoso [phase] especializa Pessoa
 ============================================================
 
 ============================================================

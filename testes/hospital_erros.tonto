@@ -1,0 +1,50 @@
+import Farmacia
+
+package Hospital
+
+datatype Endereco {
+    rua : string
+    number : int
+}
+
+enum Especialidade {
+    Clinico_Geral01,
+    Pediatra02$,
+    Ginecologista03,
+    Dentista04
+}
+
+kind Pessoa {
+    nome : string [1];
+    cpf : string [1] #
+    data_nascimento : date [1] {const}
+}
+
+phase Crianca specializes Pessoa
+phase Adulto specializes Pessoa
+
+role Funcionario specializes Pessoa
+role Medico specializes Funcionario {
+    especialidade : Especialidade
+}
+role Paciente specializes Pessoa {
+    numero_prontuario : number
+}
+
+kind Unidade_Basica_De_Saude {
+    @componentOf [1] <>-- [1..*] Medico
+}
+
+relator Consulta_Medica {
+    @mediation [1..*] -- [1] Paciente
+    @mediation [1..*] -- [1] Medico
+}
+
+@material relation Paciente [1..*] -- consultado_Por -- [1..*] Medico
+
+disjoint complete genset FaixaEtaria where Crianca, Adulto specializes Pessoa
+
+disjoint complete genset PapeisNaUBS {
+    general Funcionario
+    Medico, Paciente
+}

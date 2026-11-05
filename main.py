@@ -44,38 +44,48 @@ def itens(escopo, categoria):
     return [s for s in escopo.tabela.values() if s['categoria'] == categoria]
 
 
+def descrever_atributo(a):
+    txt = f"{a['nome']}: {a['tipo_dado']}"
+    if a.get('cardinalidade'):
+        txt += f" [{a['cardinalidade']}]"
+    if a.get('meta'):
+        txt += " {" + ", ".join(a['meta']) + "}"
+    return txt
+
+
 def descrever_relacao(r):
     est = f"@{r['estereotipo']} " if r.get('estereotipo') else ""
-    if 'escopo' in r:                    # relação declarada com corpo
-        ends = ", ".join(f"{m['nome']}: {m.get('tipo_dado') or m.get('alvo')}"
-                         + (f" [{m['cardinalidade']}]" if m.get('cardinalidade') else "")
-                         for m in r['escopo'].tabela.values())
-        ends = ends or "sem membros"
-        return f"{est}{r['nome']} {{ {ends} }}"
-    card = f" [{r['cardinalidade']}]" if r.get('cardinalidade') else ""
-    return f"{est}{r['nome']} -> {r['alvo']}{card}"
+    co = f" [{r['card_origem']}]" if r.get('card_origem') else ""
+    meio = f" {r['simbolo']} "
+    if r.get('nome'):
+        meio = f" {r['simbolo']} {r['nome']} {r['simbolo']} "
+    return f"{est}{r['origem']}{co}{meio}[{r['card_alvo']}] {r['alvo']}"
 
 
 def imprimir_escopo(escopo, recuo="  "):
     for c in itens(escopo, 'class'):
-        print(f"{recuo}Classe {c['nome']} [{c['estereotipo']}]")
+        esp = f" especializa {', '.join(c['especializa'])}" if c.get('especializa') else ""
+        nat = f" of {c['natureza']}" if c.get('natureza') else ""
+        print(f"{recuo}Classe {c['nome']} [{c['estereotipo']}]{nat}{esp}")
         attrs = itens(c['escopo'], 'attribute')
         rels = itens(c['escopo'], 'relation')
         if attrs:
-            print(f"{recuo}    atributos: " + ", ".join(f"{a['nome']}: {a['tipo_dado']}" for a in attrs))
+            print(f"{recuo}    atributos: " + ", ".join(descrever_atributo(a) for a in attrs))
         if rels:
             print(f"{recuo}    relações internas: " + "; ".join(descrever_relacao(r) for r in rels))
     externas = itens(escopo, 'relation')
     if externas:
         print(f"{recuo}Relações externas: " + "; ".join(descrever_relacao(r) for r in externas))
-    tipos = itens(escopo, 'type')
-    if tipos:
-        print(f"{recuo}Tipos de dados: " + ", ".join(t['nome'] for t in tipos))
+    for t in itens(escopo, 'type'):
+        attrs = itens(t['escopo'], 'attribute')
+        corpo = ", ".join(descrever_atributo(a) for a in attrs)
+        print(f"{recuo}Datatype {t['nome']}" + (f" {{ {corpo} }}" if corpo else ""))
     for e in itens(escopo, 'enum'):
         valores = ", ".join(v['nome'] for v in itens(e['escopo'], 'instance'))
         print(f"{recuo}Enum {e['nome']}: {valores}")
     for g in itens(escopo, 'genset'):
-        print(f"{recuo}Genset: {g['geral']} -> " + ", ".join(g['especificos']))
+        restr = " ".join(g['restricoes']) + " " if g.get('restricoes') else ""
+        print(f"{recuo}Genset {restr}{g['nome']}: {g['geral']} -> " + ", ".join(g['especificos']))
 
 
 def imprimir_sintese(tabela):
@@ -89,7 +99,7 @@ def imprimir_sintese(tabela):
           f"Atributos: {cont('attribute')}")
     print(f"Relações internas: {cont('relation', externa=False)} | "
           f"externas: {cont('relation', externa=True)} | "
-          f"Tipos de dados: {cont('type')} | Enums: {cont('enum')} | "
+          f"Datatypes: {cont('type')} | Enums: {cont('enum')} | "
           f"Gensets: {cont('genset')}")
     print("-" * 60)
 

@@ -22,6 +22,7 @@ reserved = {
     'phase': 'STEREOTYPE_CLASS',
     'role': 'STEREOTYPE_CLASS',
     'historicalRole': 'STEREOTYPE_CLASS',
+    'relator': 'STEREOTYPE_CLASS',     
 
     # Estereótipos de Relação
     'material': 'STEREOTYPE_RELATION',
@@ -52,14 +53,22 @@ reserved = {
 
     # Palavras Reservadas
     'genset': 'GENSET',
-    'disjoint': 'RESERVED_WORD',
-    'complete': 'RESERVED_WORD',
-    'general': 'RESERVED_WORD',
-    'specifics': 'RESERVED_WORD',
-    'where': 'RESERVED_WORD',
+    'disjoint': 'GENSET_MOD',            
+    'complete': 'GENSET_MOD',
+    'overlapping': 'GENSET_MOD',          
+    'incomplete': 'GENSET_MOD',            
+    'general': 'GENERAL',
+    'specifics': 'SPECIFICS',
+    'where': 'WHERE',
     'package': 'PACKAGE',
     'import': 'IMPORT',
     'functional-complexes': 'RESERVED_WORD',
+
+    # ADIÇÕES
+    'datatype': 'DATATYPE',
+    'relation': 'RELATION',
+    'specializes': 'SPECIALIZES',
+    'of': 'OF',
 
     # Palavra reservada para declarações de enum
     'enum': 'ENUM',
@@ -71,7 +80,7 @@ reserved = {
     'date': 'NATIVE_TYPE',
     'time': 'NATIVE_TYPE',
     'datetime': 'NATIVE_TYPE',
-
+    'int': 'NATIVE_TYPE',                  
     # Meta-atributos
     'ordered': 'META_ATTRIBUTE',
     'const': 'META_ATTRIBUTE',
@@ -81,7 +90,7 @@ reserved = {
 }
 
 # Estado da análise e erros léxicos
-erros_lexicos = []                 # erros léxicos acumulados
+erros_lexicos = []   # erros léxicos acumulados
 estado = {'arquivo': '<entrada>'}  # arquivo em análise (preenchido pelo main)
 
 # Lista de Nomes de Tokens
@@ -89,7 +98,8 @@ tokens = [
     'CLASS_NAME', 'RELATION_NAME', 'INSTANCE_NAME', 'NEW_TYPE',
     'LBRACE', 'RBRACE', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
     'RANGE', 'REL_BI_DIR', 'REL_UNI_DIR', 'STAR', 'AT', 'COLON',
-    'NUMBER'
+    'NUMBER',
+    'COMMA', 'REL_PLAIN'            # ADIÇÕES: ',' e '--'
 ] + list(set(reserved.values()))
 
 # Regras de Expressão Regular para Tokens Simples
@@ -102,9 +112,11 @@ t_RBRACKET    = r'\]'
 t_RANGE       = r'\.\.'
 t_REL_BI_DIR  = r'<>--'
 t_REL_UNI_DIR = r'--<>'
+t_REL_PLAIN   = r'--'
 t_STAR        = r'\*'
 t_AT          = r'@'
 t_COLON       = r':'
+t_COMMA       = r','
 
 # Regras com Funções
 def t_NUMBER(t):
@@ -150,7 +162,7 @@ SUGESTOES_ERRO = {
     '=': "O sinal de '=' não é suportado.",
     '"': "Textos entre aspas duplas não são aceitos.",
     "'": "Textos entre aspas simples não são aceitos.",
-    '-': "Hífen isolado não é aceito. Para setas, use '--<>' ou '<>--'. (A única exceção é 'functional-complexes').",
+    '-': "Hífen isolado não é aceito. Para setas, use '--', '--<>' ou '<>--'. (A única exceção é 'functional-complexes').",
     '.': "Ponto isolado não é válido. Use dois pontos seguidos para intervalos ('..').",
     '_': "Nomes de variáveis ou blocos não podem começar com sublinhado ('_').",
 }
