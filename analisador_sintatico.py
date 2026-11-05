@@ -1,5 +1,6 @@
 # analisador_sintatico.py
 # Analisador sintático e integração com a tabela de símbolos.
+
 import ply.yacc as yacc
 import analisador_lexico as lexico
 from analisador_lexico import tokens, lexer, find_column, estado
@@ -407,5 +408,5 @@ def p_error(p):
     raise ErroSintatico(msg)
 
 
-# Inicialização do parser (sem cache de tabelas, para nunca usar parsetab desatualizado)
+# Inicialização do parser
 parser = yacc.yacc(debug=False, write_tables=False)
