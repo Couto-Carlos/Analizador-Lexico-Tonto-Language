@@ -1,49 +1,43 @@
 # tabela_simbolos.py
+# Implementação da tabela de símbolos com escopos encadeados.
 
 class TabelaSimbolos:
-    def __init__(self):
-        # Tabela de dispersão principal dividida por categorias (hash tables)
-        self.tabela = {
-            'packages': {},
-            'classes': {},
-            'relations': {},
-            'types': {},
-            'instances': {},
-            'gensets': {}
-        }
-        self.pacote_atual = "global"
+    def __init__(self, prev=None, nome="global", tipo="global"):
+        self.tabela = {}      # tabela de dispersão deste escopo: nome -> símbolo
+        self.prev = prev      # escopo envolvente (None no escopo global)
+        self.nome = nome
+        self.tipo = tipo      # global | package | class | relation | enum
+        self.imports = []     # nomes de pacotes importados neste escopo
 
-    def inserir(self, categoria, nome, dados):
-        """Insere um símbolo na categoria correspondente."""
-        if categoria not in self.tabela:
-            self.tabela[categoria] = {}
-        
-        # Adiciona contexto do pacote atual
-        dados['pacote'] = self.pacote_atual
-        self.tabela[categoria][nome] = dados
+    def put(self, chave, simbolo):
+        """Insere no escopo atual. Retorna False se o nome já existir neste escopo."""
+        if chave in self.tabela:
+            return False
+        self.tabela[chave] = simbolo
+        return True
 
-    def buscar(self, categoria, nome):
-        """Busca um símbolo na tabela de dispersão."""
-        return self.tabela.get(categoria, {}).get(nome, None)
+    def get_local(self, chave):
+        """Busca apenas no escopo atual."""
+        return self.tabela.get(chave)
 
-    def definir_pacote(self, nome_pacote):
-        self.pacote_atual = nome_pacote
-        if nome_pacote not in self.tabela['packages']:
-            self.tabela['packages'][nome_pacote] = {'classes': [], 'relacoes': []}
+    def get(self, chave):
+        """Busca no escopo atual e, se não achar, sobe pela cadeia 'prev'."""
+        st = self
+        while st is not None:
+            achado = st.tabela.get(chave)
+            if achado is not None:
+                return achado
+            st = st.prev
+        return None
 
-    def obter_resumo(self):
-        """Retorna as contagens para a tabela de síntese."""
-        return {
-            'Pacotes': list(self.tabela['packages'].keys()),
-            'Total Pacotes': len(self.tabela['packages']),
-            'Classes': list(self.tabela['classes'].keys()),
-            'Total Classes': len(self.tabela['classes']),
-            'Relações': list(self.tabela['relations'].keys()),
-            'Total Relações': len(self.tabela['relations']),
-            'Tipos': list(self.tabela['types'].keys()),
-            'Total Tipos': len(self.tabela['types']),
-            'Indivíduos': list(self.tabela['instances'].keys()),
-            'Total Indivíduos': len(self.tabela['instances']),
-            'Gensets': list(self.tabela['gensets'].keys()),
-            'Total Gensets': len(self.tabela['gensets'])
-        }
+    def novo_escopo(self, nome, tipo):
+        """Cria um escopo filho encadeado a este."""
+        return TabelaSimbolos(prev=self, nome=nome, tipo=tipo)
+
+
+def percorrer(escopo):
+    """Gera todos os símbolos de um escopo e dos escopos aninhados."""
+    for s in escopo.tabela.values():
+        yield s
+        if 'escopo' in s:
+            yield from percorrer(s['escopo'])

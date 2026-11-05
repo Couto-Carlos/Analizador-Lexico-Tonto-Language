@@ -1,31 +1,34 @@
-# Analisador Léxico para a Linguagem TONTO (Textual Ontology Language)
+# Analisador Léxico e Sintático para a Linguagem TONTO (Textual Ontology Language)
 
-Projeto da disciplina de Compiladores Sexto Período da UFERSA
+Projeto da disciplina de Compiladores, Sexto Período, UFERSA.
 
-## 1. Visão Geral do Projeto
+## 1. Visão Geral
 
-Este projeto consiste na implementação de um **Analisador Léxico** para a linguagem TONTO (Textual Ontology Language). TONTO é uma linguagem textual para especificação de ontologias computacionais, que são fundamentais para a Web Semântica (Web 3.0).
+Analisador léxico e sintático para a TONTO, uma linguagem textual para especificação de ontologias. O programa lê arquivos `.tonto`, reconhece os construtos da linguagem, preenche uma tabela de símbolos e produz duas saídas:
 
-O objetivo deste analisador é ler um arquivo-fonte com a extensão `.tonto`, processar seu conteúdo e identificar todos os componentes léxicos (tokens) da linguagem, como palavras-chave, identificadores, símbolos e tipos.
-
-O programa é capaz de:
-* Reconhecer os tokens válidos da linguagem TONTO.
-* Ignorar espaços em branco, tabulações e comentários (`//...`).
-* Gerar uma **tabela de símbolos** formatada, listando o lexema, o tipo de token, a linha e a coluna onde foi encontrado.
-* Gerar uma **tabela de sintese** formatada.
-* Identificar e reportar **erros léxicos** (caracteres inesperados), indicando a linha do erro.
+* **Tabela de síntese:** resumo dos construtos encontrados (pacotes, classes, atributos, relações internas e externas, tipos de dados, enums e gensets), organizados por pacote.
+* **Relatório de erros:** erros léxicos e sintáticos, com arquivo, linha, coluna e sugestão de tratamento.
 
 ## 2. Equipe
 
 * Carlos Eduardo Couto de Castro
 * Adriam Keven Ferreira de Sousa
 
-## 3. Tecnologias Utilizadas
+## 3. Tecnologias
 
 * **Python 3.x**
-* **PLY (Python Lex-Yacc)**: Biblioteca utilizada para a geração do analisador léxico.
+* **PLY (Python Lex-Yacc)**: `ply.lex` para o léxico e `ply.yacc` para o sintático.
 
-## 4. Configuração do Ambiente
+## 4. Estrutura do Projeto
+
+| Arquivo | Função |
+|---|---|
+| `analisador_lexico.py` | Reconhecimento dos tokens e identificação de erros léxicos |
+| `analisador_sintatico.py` | Regras da gramática e preenchimento da tabela de símbolos |
+| `tabela_simbolos.py` | Implementação da tabela de símbolos e dos escopos |
+| `main.py` | Execução das análises e apresentação dos resultados |
+
+## 5. Configuração do Ambiente
 
 Para executar este projeto, é necessário ter o Python 3 instalado e a biblioteca PLY.
 
@@ -39,18 +42,78 @@ O projeto depende apenas da biblioteca ply. Você pode instalá-la diretamente:
 ```bash
 pip install ply
 ```
-## 🗂️ Implementação da Tabela de Símbolos (Tabela de Dispersão)
 
-A tabela de símbolos foi implementada utilizando uma estrutura de **tabela de dispersão (Hash Table / Dicionários em Python)** na classe `TabelaSimbolos` (localizada no arquivo `tabela_simbolos.py`). 
+## 6. Construtos Reconhecidos
 
-A estrutura é dividida em sub-dicionários categorizados por tipo de construto da linguagem TONTO para garantir buscas, inserções e contagens com complexidade otimizada:
+* Pacotes (`package Nome { ... }`) e importações (`import Nome`)
+* Classes com estereótipo (`kind Person { ... }`), com atributos e relações internas
+* Classes enumeradas (`enum Cor { Vermelho1 Verde2 }`)
+* Relações internas e externas às classes
+* Novos tipos de dados (nomes terminados em `DataType`), baseados em `number`, `string`, `boolean`, `date`, `time` e `datetime`
+* Conjuntos de generalização (`genset Geral: Especifica1 Especifica2`)
 
-```python
-self.tabela = {
-    'packages': {},    # Armazena os pacotes e seus escopos
-    'classes': {},     # Armazena classes, estereótipos e corpos
-    'relations': {},   # Armazena relações, atributos e alvos
-    'types': {},       # Armazena novos tipos de dados (ex: *DataType)
-    'instances': {},   # Armazena indivíduos e instâncias
-    'gensets': {}      # Armazena conjuntos de generalização (taxonomias)
-}
+## 7. Implementação da Tabela de Símbolos
+
+A tabela está em `tabela_simbolos.py`, na classe `TabelaSimbolos`. Cada **escopo** possui sua própria tabela de dispersão, implementada com o `dict` do Python e são encadeados.
+
+```
+global
+ └── package UniversitySystem
+      ├── class Person
+      │    └── atributos e relações internas
+      └── relation isEnrolledIn
+```
+
+**Campos de `TabelaSimbolos`**
+
+* `tabela`: o `dict` do escopo (nome -> símbolo)
+* `prev`: escopo pai (`None` no global)
+* `nome` e `tipo`: identificação do escopo (`global`, `package`, `class`, `relation` ou `enum`)
+* `imports`: pacotes importados naquele escopo
+
+**Operações**
+
+* `put(chave, simbolo)`: insere no escopo atual; se o nome já existir ali, não insere e retorna `False`
+* `get_local(chave)`: busca apenas no escopo atual
+* `get(chave)`: busca no escopo atual e anteriores
+* `novo_escopo(nome, tipo)`: cria um escopo filho
+* `percorrer(escopo)`: percorre os símbolos armazenados, inclusive nos escopos internos
+
+Durante a análise sintática, o **parser** controla a entrada e a saída dos escopos e adiciona os elementos reconhecidos à tabela.
+
+## 8. Tratamento de Erros
+
+* **Erros léxicos:** ocorrem quando o analisador encontra caracteres que não pertencem à linguagem.
+* **Erros sintáticos:** ocorrem quando os elementos do arquivo não seguem as regras da gramática.
+
+## 9. Exemplo de Saída
+
+```
+Analisando: testes/teste_avancado.tonto
+
+============================================================
+TABELA DE SÍNTESE (CONSTRUTOS TONTO)
+============================================================
+Pacotes: 1 | Classes: 4 | Atributos: 7
+Relações internas: 0 | externas: 1 | Tipos de dados: 2 | Enums: 0 | Gensets: 1
+------------------------------------------------------------
+
+Pacote HealthSystem (importa: UniversitySystem)  [testes/teste_avancado.tonto]
+  Classe LivingBeing [mixin]
+      atributos: name: string, birthDate: date
+  Classe Patient [kind]
+      atributos: medicalRecordNumber: string, email: string
+  Classe Doctor [kind]
+      atributos: crm: string, specialty: string
+  Classe Dose [quantity]
+      atributos: amount: number
+  Relações externas: @material MedicalConsultation { patient: Patient [1..1], doctor: Doctor [1..*] }
+  Tipos de dados: PhoneDataType, AddressDataType
+  Genset: Doctor -> GeneralPractician, Surgeon
+============================================================
+
+============================================================
+RELATÓRIO DE ERROS E SUGESTÕES DE TRATAMENTO
+============================================================
+Nenhum erro encontrado.
+```

@@ -1,52 +1,141 @@
 # main.py
+import os
 import sys
-from analisador_lexico import lexer, find_column
-from analisador_sintatico import parser, tabela_simbolos, erros_sintaticos
+import glob
 
-def analisar_arquivo(caminho_arquivo):
+import analisador_lexico as lexico
+from analisador_lexico import lexer
+from analisador_sintatico import (parser, erros_sintaticos, ErroSintatico,
+                                  tabela_simbolos, resetar_escopo)
+from tabela_simbolos import percorrer
+
+
+def coletar_arquivos(argumentos):
+    """Aceita arquivos e/ou pastas (todos os .tonto da pasta)."""
+    arquivos = []
+    for a in argumentos:
+        if os.path.isdir(a):
+            arquivos += sorted(glob.glob(os.path.join(a, '*.tonto')))
+        else:
+            arquivos.append(a)
+    return arquivos
+
+
+def analisar_arquivo(caminho):
     try:
-        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+        with open(caminho, 'r', encoding='utf-8') as f:
             codigo = f.read()
     except FileNotFoundError:
-        print(f"ERRO: Arquivo '{caminho_arquivo}' não encontrado.")
+        print(f"ERRO: Arquivo '{caminho}' não encontrado.")
         return
 
-    print(f"\n=== INICIANDO ANÁLISE DO ARQUIVO: {caminho_arquivo} ===")
-    
-    # 1. Executa a Análise Sintática (que por sua vez consome o Léxico)
-    resultado_parser = parser.parse(codigo, lexer=lexer)
+    print(f"Analisando: {caminho}")
+    lexico.estado['arquivo'] = caminho
+    lexer.lineno = 1                     # zera a contagem de linhas a cada arquivo
+    resetar_escopo()                     # cada arquivo começa no escopo global
+    try:
+        parser.parse(codigo, lexer=lexer)   # o parser preenche a tabela de símbolos
+    except ErroSintatico:
+        pass                             # já registrado em erros_sintaticos
 
-    # 2. Relatório de Síntese (Requisito do Professor)
-    resumo = tabela_simbolos.obter_resumo()
-    
-    print("\n" + "="*50)
-    print(f"{'TABELA DE SÍNTESE (CONSTRUTOS TONTO)':<50}")
-    print("="*50)
-    print(f"{'Construto / Categoria':<30} {'Quantidade':<10} {'Elementos encontrados':<20}")
-    print("-"*50)
-    print(f"{'Pacotes':<30} {resumo['Total Pacotes']:<10} {str(resumo['Pacotes'])[:20]}")
-    print(f"{'Classes':<30} {resumo['Total Classes']:<10} {str(resumo['Classes'])[:20]}")
-    print(f"{'Relações':<30} {resumo['Total Relações']:<10} {str(resumo['Relações'])[:20]}")
-    print(f"{'Tipos de Dados':<30} {resumo['Total Tipos']:<10} {str(resumo['Tipos'])[:20]}")
-    print(f"{'Indivíduos':<30} {resumo['Total Indivíduos']:<10} {str(resumo['Indivíduos'])[:20]}")
-    print(f"{'Gensets':<30} {resumo['Total Gensets']:<10} {str(resumo['Gensets'])[:20]}")
-    print("="*50)
 
-    # 3. Relatório de Erros Sintáticos e Sugestões
-    if erros_sintaticos:
-        print("\n" + "="*50)
-        print(f"{'RELATÓRIO DE ERROS E SUGESTÕES DE TRATAMENTO':<50}")
-        print("="*50)
-        for i, erro in enumerate(erros_sintaticos, 1):
-            print(f"[{i}] {erro['mensagem']}")
-            print(f"    💡 Sugestão: {erro['sugestao']}\n")
-    else:
-        print("\n✨ Análise concluída com sucesso! Nenhum erro sintático encontrado.")
+# Tabela de síntese
+def itens(escopo, categoria):
+    return [s for s in escopo.tabela.values() if s['categoria'] == categoria]
+
+
+def descrever_relacao(r):
+    est = f"@{r['estereotipo']} " if r.get('estereotipo') else ""
+    if 'escopo' in r:                    # relação declarada com corpo
+        ends = ", ".join(f"{m['nome']}: {m.get('tipo_dado') or m.get('alvo')}"
+                         + (f" [{m['cardinalidade']}]" if m.get('cardinalidade') else "")
+                         for m in r['escopo'].tabela.values())
+        ends = ends or "sem membros"
+        return f"{est}{r['nome']} {{ {ends} }}"
+    card = f" [{r['cardinalidade']}]" if r.get('cardinalidade') else ""
+    return f"{est}{r['nome']} -> {r['alvo']}{card}"
+
+
+def imprimir_escopo(escopo, recuo="  "):
+    for c in itens(escopo, 'class'):
+        print(f"{recuo}Classe {c['nome']} [{c['estereotipo']}]")
+        attrs = itens(c['escopo'], 'attribute')
+        rels = itens(c['escopo'], 'relation')
+        if attrs:
+            print(f"{recuo}    atributos: " + ", ".join(f"{a['nome']}: {a['tipo_dado']}" for a in attrs))
+        if rels:
+            print(f"{recuo}    relações internas: " + "; ".join(descrever_relacao(r) for r in rels))
+    externas = itens(escopo, 'relation')
+    if externas:
+        print(f"{recuo}Relações externas: " + "; ".join(descrever_relacao(r) for r in externas))
+    tipos = itens(escopo, 'type')
+    if tipos:
+        print(f"{recuo}Tipos de dados: " + ", ".join(t['nome'] for t in tipos))
+    for e in itens(escopo, 'enum'):
+        valores = ", ".join(v['nome'] for v in itens(e['escopo'], 'instance'))
+        print(f"{recuo}Enum {e['nome']}: {valores}")
+    for g in itens(escopo, 'genset'):
+        print(f"{recuo}Genset: {g['geral']} -> " + ", ".join(g['especificos']))
+
+
+def imprimir_sintese(tabela):
+    todos = list(percorrer(tabela))
+    cont = lambda cat, **f: sum(1 for s in todos if s['categoria'] == cat
+                                and all(s.get(k) == v for k, v in f.items()))
+    print("\n" + "=" * 60)
+    print("TABELA DE SÍNTESE (CONSTRUTOS TONTO)")
+    print("=" * 60)
+    print(f"Pacotes: {cont('package')} | Classes: {cont('class')} | "
+          f"Atributos: {cont('attribute')}")
+    print(f"Relações internas: {cont('relation', externa=False)} | "
+          f"externas: {cont('relation', externa=True)} | "
+          f"Tipos de dados: {cont('type')} | Enums: {cont('enum')} | "
+          f"Gensets: {cont('genset')}")
+    print("-" * 60)
+
+    if any(s['categoria'] != 'package' for s in tabela.tabela.values()):
+        print("Fora de pacotes (global):")
+        imprimir_escopo(tabela)
+    for p in itens(tabela, 'package'):
+        imp = f" (importa: {', '.join(p['escopo'].imports)})" if p['escopo'].imports else ""
+        print(f"\nPacote {p['nome']}{imp}  [{p['arquivo']}]")
+        imprimir_escopo(p['escopo'])
+    print("=" * 60)
+
+
+# Relatório de erros
+def imprimir_erros(secoes):
+    total = sum(len(e) for _, e in secoes)
+    print("\n" + "=" * 60)
+    print("RELATÓRIO DE ERROS E SUGESTÕES DE TRATAMENTO")
+    print("=" * 60)
+    if total == 0:
+        print("Nenhum erro encontrado.")
+        return
+    for titulo, erros in secoes:
+        if not erros:
+            continue
+        print(f"\n{titulo} ({len(erros)})")
+        for i, e in enumerate(erros, 1):
+            pos = f"linha {e['linha']}" + (f", coluna {e['coluna']}" if e.get('coluna') else "")
+            print(f"[{i}] {e['arquivo']}, {pos}: {e['mensagem']}")
+            print(f"    Sugestão: {e['sugestao']}")
+
+
+def main(argumentos):
+    arquivos = coletar_arquivos(argumentos)
+    if not arquivos:
+        print("Nenhum arquivo .tonto encontrado.")
+        return
+    for caminho in arquivos:
+        analisar_arquivo(caminho)
+    imprimir_sintese(tabela_simbolos)
+    imprimir_erros([("Erros léxicos", lexico.erros_lexicos),
+                    ("Erros sintáticos", erros_sintaticos)])
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Uso: python main.py <caminho_para_arquivo.tonto>")
+        print("Uso: python main.py <arquivo.tonto | pasta> [mais arquivos...]")
         sys.exit(1)
-        
-    arquivo = sys.argv[1]
-    analisar_arquivo(arquivo)
+    main(sys.argv[1:])

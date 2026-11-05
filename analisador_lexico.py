@@ -1,95 +1,98 @@
 import ply.lex as lex
 
-# --- Dicionário de Palavras Reservadas e Estereótipos ---
-# (O dicionário 'reserved' continua o mesmo)
+# Palavras reservadas e estereótipos
 reserved = {
     # Estereótipos de Classe
-    'event': 'STEREOTYPE_CLASS', 
-    'situation': 'STEREOTYPE_CLASS', 
-    'process': 'STEREOTYPE_CLASS', 
-    'category': 'STEREOTYPE_CLASS', 
-    'mixin': 'STEREOTYPE_CLASS', 
-    'phaseMixin': 'STEREOTYPE_CLASS', 
-    'roleMixin': 'STEREOTYPE_CLASS', 
-    'historicalRoleMixin': 'STEREOTYPE_CLASS', 
-    'kind': 'STEREOTYPE_CLASS', 
-    'collective': 'STEREOTYPE_CLASS', 
-    'quantity': 'STEREOTYPE_CLASS', 
-    'quality': 'STEREOTYPE_CLASS', 
-    'mode': 'STEREOTYPE_CLASS', 
-    'intrisicMode': 'STEREOTYPE_CLASS', 
-    'extrinsicMode': 'STEREOTYPE_CLASS', 
-    'subkind': 'STEREOTYPE_CLASS', 'phase': 
-    'STEREOTYPE_CLASS', 
-    'role': 'STEREOTYPE_CLASS', 
+    'event': 'STEREOTYPE_CLASS',
+    'situation': 'STEREOTYPE_CLASS',
+    'process': 'STEREOTYPE_CLASS',
+    'category': 'STEREOTYPE_CLASS',
+    'mixin': 'STEREOTYPE_CLASS',
+    'phaseMixin': 'STEREOTYPE_CLASS',
+    'roleMixin': 'STEREOTYPE_CLASS',
+    'historicalRoleMixin': 'STEREOTYPE_CLASS',
+    'kind': 'STEREOTYPE_CLASS',
+    'collective': 'STEREOTYPE_CLASS',
+    'quantity': 'STEREOTYPE_CLASS',
+    'quality': 'STEREOTYPE_CLASS',
+    'mode': 'STEREOTYPE_CLASS',
+    'intrisicMode': 'STEREOTYPE_CLASS',
+    'extrinsicMode': 'STEREOTYPE_CLASS',
+    'subkind': 'STEREOTYPE_CLASS',
+    'phase': 'STEREOTYPE_CLASS',
+    'role': 'STEREOTYPE_CLASS',
     'historicalRole': 'STEREOTYPE_CLASS',
-    
+
     # Estereótipos de Relação
-    'material': 'STEREOTYPE_RELATION', 
-    'derivation': 'STEREOTYPE_RELATION', 
-    'comparative': 'STEREOTYPE_RELATION', 
-    'mediation': 'STEREOTYPE_RELATION', 
-    'characterization': 'STEREOTYPE_RELATION', 
-    'externalDependence': 'STEREOTYPE_RELATION', 
-    'componentOf': 'STEREOTYPE_RELATION', 
-    'memberOf': 'STEREOTYPE_RELATION', 
-    'subCollectionOf': 'STEREOTYPE_RELATION', 
-    'subQualityOf': 'STEREOTYPE_RELATION', 
-    'instantiation': 'STEREOTYPE_RELATION', 
-    'termination': 'STEREOTYPE_RELATION', 
-    'participational': 'STEREOTYPE_RELATION', 
-    'participation': 'STEREOTYPE_RELATION', 
-    'historicalDependence': 'STEREOTYPE_RELATION', 
-    'creation': 'STEREOTYPE_RELATION', 
-    'manifestation': 'STEREOTYPE_RELATION', 
-    'bringsAbout': 'STEREOTYPE_RELATION', 
-    'triggers': 'STEREOTYPE_RELATION', 
-    'composition': 'STEREOTYPE_RELATION', 
-    'aggregation': 'STEREOTYPE_RELATION', 
-    'inherence': 'STEREOTYPE_RELATION', 
-    'value': 'STEREOTYPE_RELATION', 
-    'formal': 'STEREOTYPE_RELATION', 
+    'material': 'STEREOTYPE_RELATION',
+    'derivation': 'STEREOTYPE_RELATION',
+    'comparative': 'STEREOTYPE_RELATION',
+    'mediation': 'STEREOTYPE_RELATION',
+    'characterization': 'STEREOTYPE_RELATION',
+    'externalDependence': 'STEREOTYPE_RELATION',
+    'componentOf': 'STEREOTYPE_RELATION',
+    'memberOf': 'STEREOTYPE_RELATION',
+    'subCollectionOf': 'STEREOTYPE_RELATION',
+    'subQualityOf': 'STEREOTYPE_RELATION',
+    'instantiation': 'STEREOTYPE_RELATION',
+    'termination': 'STEREOTYPE_RELATION',
+    'participational': 'STEREOTYPE_RELATION',
+    'participation': 'STEREOTYPE_RELATION',
+    'historicalDependence': 'STEREOTYPE_RELATION',
+    'creation': 'STEREOTYPE_RELATION',
+    'manifestation': 'STEREOTYPE_RELATION',
+    'bringsAbout': 'STEREOTYPE_RELATION',
+    'triggers': 'STEREOTYPE_RELATION',
+    'composition': 'STEREOTYPE_RELATION',
+    'aggregation': 'STEREOTYPE_RELATION',
+    'inherence': 'STEREOTYPE_RELATION',
+    'value': 'STEREOTYPE_RELATION',
+    'formal': 'STEREOTYPE_RELATION',
     'constitution': 'STEREOTYPE_RELATION',
 
     # Palavras Reservadas
-    'genset': 'RESERVED_WORD', 
-    'disjoint': 'RESERVED_WORD', 
-    'complete': 'RESERVED_WORD', 
-    'general': 'RESERVED_WORD', 
-    'specifics': 'RESERVED_WORD', 
-    'where': 'RESERVED_WORD', 
-    'package': 'RESERVED_WORD',
-    'import': 'RESERVED_WORD',
+    'genset': 'GENSET',
+    'disjoint': 'RESERVED_WORD',
+    'complete': 'RESERVED_WORD',
+    'general': 'RESERVED_WORD',
+    'specifics': 'RESERVED_WORD',
+    'where': 'RESERVED_WORD',
+    'package': 'PACKAGE',
+    'import': 'IMPORT',
     'functional-complexes': 'RESERVED_WORD',
 
+    # Palavra reservada para declarações de enum
+    'enum': 'ENUM',
+
     # Tipos de Dados Nativos
-    'number': 'NATIVE_TYPE', 
-    'string': 'NATIVE_TYPE', 
-    'boolean': 'NATIVE_TYPE', 
-    'date': 'NATIVE_TYPE', 
-    'time': 'NATIVE_TYPE', 
+    'number': 'NATIVE_TYPE',
+    'string': 'NATIVE_TYPE',
+    'boolean': 'NATIVE_TYPE',
+    'date': 'NATIVE_TYPE',
+    'time': 'NATIVE_TYPE',
     'datetime': 'NATIVE_TYPE',
 
     # Meta-atributos
-    'ordered': 'META_ATTRIBUTE', 
-    'const': 'META_ATTRIBUTE', 
-    'derived': 'META_ATTRIBUTE', 
-    'subsets': 'META_ATTRIBUTE', 
+    'ordered': 'META_ATTRIBUTE',
+    'const': 'META_ATTRIBUTE',
+    'derived': 'META_ATTRIBUTE',
+    'subsets': 'META_ATTRIBUTE',
     'redefines': 'META_ATTRIBUTE'
 }
 
+# Estado da análise e erros léxicos
+erros_lexicos = []                 # erros léxicos acumulados
+estado = {'arquivo': '<entrada>'}  # arquivo em análise (preenchido pelo main)
 
-# --- Lista de Nomes de Tokens ---
+# Lista de Nomes de Tokens
 tokens = [
     'CLASS_NAME', 'RELATION_NAME', 'INSTANCE_NAME', 'NEW_TYPE',
     'LBRACE', 'RBRACE', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
     'RANGE', 'REL_BI_DIR', 'REL_UNI_DIR', 'STAR', 'AT', 'COLON',
-    'NUMBER',  # <-- NOVO TOKEN ADICIONADO
-    'PACKAGE_SEPARATOR' # <-- NOVO TOKEN ADICIONADO
+    'NUMBER'
 ] + list(set(reserved.values()))
 
-# --- Regras de Expressão Regular para Tokens Simples ---
-t_PACKAGE_SEPARATOR = r'::-' # <-- NOVA REGRA ADICIONADA
+# Regras de Expressão Regular para Tokens Simples
 t_LBRACE      = r'\{'
 t_RBRACE      = r'\}'
 t_LPAREN      = r'\('
@@ -103,12 +106,10 @@ t_STAR        = r'\*'
 t_AT          = r'@'
 t_COLON       = r':'
 
-# --- Regras com Funções ---
-
-# 💡 NOVA REGRA PARA NÚMEROS
+# Regras com Funções
 def t_NUMBER(t):
     r'\d+'
-    t.value = int(t.value) # Converte a string de dígitos para um inteiro
+    t.value = int(t.value)
     return t
 
 def t_INSTANCE_NAME(t):
@@ -131,16 +132,17 @@ def t_RELATION_NAME(t):
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
-    t.lexer.ultimo_inicio_linha = t.lexpos + len(t.value)
 
-t_ignore = ' \t'
+t_ignore = ' \t\r'
 
 def t_ignore_COMMENT(t):
     r'//.*'
     pass
 
 def find_column(token):
-    inicio_da_linha = getattr(lexer, 'ultimo_inicio_linha', 0)
+    """Coluna (base 1) de um token, calculada a partir do texto de entrada."""
+    dados = token.lexer.lexdata
+    inicio_da_linha = dados.rfind('\n', 0, token.lexpos) + 1
     return (token.lexpos - inicio_da_linha) + 1
 
 SUGESTOES_ERRO = {
@@ -156,10 +158,16 @@ SUGESTOES_ERRO = {
 def t_error(t):
     sugestao = SUGESTOES_ERRO.get(
         t.value[0],
-        "verifique se o símbolo pertence à linguagem e, se não, exclua-o."
+        "Verifique se o símbolo pertence à linguagem e, se não, exclua-o."
     )
-    print(f"ERRO: Linha {t.lexer.lineno}: caractere inválido '{t.value[0]}'. {sugestao}")
+    erros_lexicos.append({
+        'arquivo': estado['arquivo'],
+        'linha': t.lexer.lineno,
+        'coluna': find_column(t),
+        'mensagem': f"caractere inválido '{t.value[0]}'",
+        'sugestao': sugestao,
+    })
     t.lexer.skip(1)
 
-# --- Construção do Analisador Léxico ---
+# Inicialização do lexer
 lexer = lex.lex()
