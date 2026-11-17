@@ -83,12 +83,28 @@ global
 
 **Uso na saída:** a tabela de síntese é gerada percorrendo a tabela (`percorrer`), contando e listando os símbolos por pacote e por classe. A análise é baseada na tabela de símbolos.
 
-## 8. Tratamento de Erros
+## 8.Analisador Semântico e Validação de ODPs
+
+O analisador semântico valida os **Padrões de Projeto de Ontologias (*Ontology Design Patterns - ODPs*)** propostos na especificação da linguagem TONTO[cite: 1, 2]:
+1. **Subkind Pattern**: Validação de subkinds especializados de um kind, exigindo restrição `disjoint` nos gensets[cite: 2].
+2. **Role Pattern**: Validação de papéis (*roles*) vinculados a classes base.
+3. **Phase Pattern**: Validação de fases temporais (*phases*), onde o modificador `disjoint` é obrigatório por restrição semântica[cite: 3].
+4. **Relator Pattern**: Verificação de classes de relatores com ligações de `@mediation` e relações `@material`[cite: 3].
+5. **Mode Pattern**: Análise de propriedades modais com `@characterization` e `@externalDependence`[cite: 3].
+6. **RoleMixin Pattern**: Verificação de mixins de papéis em taxonomias complexas[cite: 3].
+
+### Mecanismos Implementados:
+- **Relatório Unificado**: Agrupa padrões encontrados, erros contextuais e rastreamento de linhas.
+- **Correção por Coerção**: Aplica ajustes automáticos em restrições lógicas mal formadas nos gensets (ex: remoção/adição de `disjoint` em fases e papéis).
+- **Dedução de Padrões Incompletos**: Utiliza inferência de escopo para completar relações ou gensets implícitos ausentes no código-fonte.
+
+
+## 9. Tratamento de Erros
 
 * **Erros léxicos:** ocorrem quando o analisador encontra caracteres que não pertencem à linguagem.
 * **Erros sintáticos:** ocorrem quando os elementos do arquivo não seguem as regras da gramática.
 
-## 9. Exemplo de Saída
+## 10. Exemplo de Saída
 
 ```
 Analisando: testes/pessoa.tonto

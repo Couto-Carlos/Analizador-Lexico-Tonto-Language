@@ -1,412 +1,233 @@
 # analisador_sintatico.py
-# Analisador sintático e integração com a tabela de símbolos.
-
 import ply.yacc as yacc
-import analisador_lexico as lexico
-from analisador_lexico import tokens, lexer, find_column, estado
+from analisador_lexico import tokens, lexer
 from tabela_simbolos import TabelaSimbolos
 
+tabela_simbolos = TabelaSimbolos()
 erros_sintaticos = []
 
-# Tabela de símbolos global e escopo em que o parser se encontra
-tabela_simbolos = TabelaSimbolos(nome='global', tipo='global')
-escopo_atual = tabela_simbolos
-_contador_relacoes = 0
-_imports_pendentes = []# imports lidos antes do 'package' do arquivo
-
-
 class ErroSintatico(Exception):
-    """Interrompe a análise do arquivo atual no primeiro erro sintático."""
-
-
-# Funções auxiliares
-def resetar_escopo():
-    """Volta ao escopo global (chamado antes de cada arquivo)."""
-    global escopo_atual
-    escopo_atual = tabela_simbolos
-    _imports_pendentes.clear()
-
-def inserir(chave, simbolo):
-    simbolo['arquivo'] = estado['arquivo']
-    escopo_atual.put(chave, simbolo)
-
-def abrir_escopo(chave, simbolo, tipo_escopo):
-    """Insere o símbolo no escopo atual e entra em um novo escopo filho."""
-    global escopo_atual
-    filho = escopo_atual.novo_escopo(chave, tipo_escopo)
-    simbolo['escopo'] = filho
-    inserir(chave, simbolo)
-    escopo_atual = filho
-
-def fechar_escopo():
-    global escopo_atual
-    if escopo_atual.prev is not None:
-        escopo_atual = escopo_atual.prev
-
-def inserir_relacao(nome, estereotipo, origem, tail, externa, linha):
-    """Insere uma relação (interna ou externa). Relações sem nome recebem chave única."""
-    global _contador_relacoes
-    _contador_relacoes += 1
-    chave = nome if nome else f"relation#{_contador_relacoes}"
-    inserir(chave, {
-        'categoria': 'relation', 'nome': nome, 'estereotipo': estereotipo,
-        'origem': origem, 'alvo': tail['alvo'],
-        'card_origem': tail['card_origem'], 'card_alvo': tail['card_alvo'],
-        'simbolo': tail['simbolo'], 'externa': externa, 'linha': linha,
-    })
-
-
-# Gramática
+    pass
 
 def p_program(p):
-    '''program : preamble package_section_list
-               | package_section_list
+    '''program : statement_list
                | empty'''
-
-
-def p_preamble(p):
-    '''preamble : preamble import_decl
-                | import_decl'''
-
-
-def p_import_decl(p):
-    '''import_decl : IMPORT CLASS_NAME'''
-    _imports_pendentes.append(p[2])
-
-
-def p_package_section_list(p):
-    '''package_section_list : package_section_list package_section
-                            | package_section'''
-
-
-def p_package_section(p):
-    '''package_section : package_header statement_list
-                       | package_header'''
-
-
-def p_package_header(p):
-    '''package_header : PACKAGE CLASS_NAME'''
-    if escopo_atual.tipo == 'package':
-        fechar_escopo()
-    abrir_escopo(p[2], {'categoria': 'package', 'nome': p[2], 'linha': p.lineno(2)}, 'package')
-    escopo_atual.imports.extend(_imports_pendentes)
-    _imports_pendentes.clear()
-
+    p[0] = p[1]
 
 def p_statement_list(p):
     '''statement_list : statement_list statement
                       | statement'''
-
+    if len(p) == 3:
+        p[0] = (p[1] if isinstance(p[1], list) else [p[1]]) + [p[2]]
+    else:
+        p[0] = [p[1]]
 
 def p_statement(p):
-    '''statement : class_decl
-                 | type_decl
-                 | enum_decl
-                 | genset_decl
-                 | external_relation'''
+    '''statement : keyword_statement
+                 | class_decl
+                 | relation_decl
+                 | annotated_relation_decl
+                 | type_decl'''
+    p[0] = p[1]
 
+def p_keyword_statement(p):
+    '''keyword_statement : RESERVED_WORD RESERVED_WORD RESERVED_WORD CLASS_NAME LBRACE statement_list RBRACE
+                         | RESERVED_WORD RESERVED_WORD CLASS_NAME LBRACE statement_list RBRACE
+                         | RESERVED_WORD CLASS_NAME LBRACE statement_list RBRACE
+                         | RESERVED_WORD CLASS_NAME LBRACE RBRACE
+                         | RESERVED_WORD CLASS_NAME COLON class_list_genset
+                         | RESERVED_WORD CLASS_NAME
+                         | RESERVED_WORD RELATION_NAME'''
+    
+    if len(p) == 8:
+        mod1, mod2, keyword, name, corpo = p[1], p[2], p[3], p[4], p[6]
+        modificadores = [mod1, mod2]
+    elif len(p) == 7:
+        mod1, keyword, name, corpo = p[1], p[2], p[3], p[5]
+        modificadores = [mod1]
+    elif len(p) == 6:
+        keyword, name, corpo = p[1], p[2], p[4]
+        modificadores = []
+    elif len(p) == 5:
+        keyword, name, corpo = p[1], p[2], []
+        modificadores = []
+    elif len(p) == 4 and p.slice[3].type == 'class_list_genset':
+        keyword, name, elementos = p[1], p[2], p[4]
+        modificadores = []
+    else:
+        keyword, name = p[1], p[2]
+        modificadores = []
 
-# Listas de nomes de classes separados por vírgula
-def p_class_list(p):
-    '''class_list : class_list COMMA CLASS_NAME
-                  | CLASS_NAME'''
-    p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
-
-
-# Classes:
-def p_class_header(p):
-    '''class_header : STEREOTYPE_CLASS CLASS_NAME opt_nature opt_specializes'''
-    abrir_escopo(p[2], {'categoria': 'class', 'nome': p[2], 'estereotipo': p[1],
-                        'natureza': p[3], 'especializa': p[4],
-                        'linha': p.lineno(2)}, 'class')
-
-
-def p_opt_nature(p):
-    '''opt_nature : OF RESERVED_WORD
-                  | empty'''
-    p[0] = p[2] if len(p) == 3 else None
-
-
-def p_opt_specializes(p):
-    '''opt_specializes : SPECIALIZES class_list
-                       | empty'''
-    p[0] = p[2] if len(p) == 3 else []
-
+    if keyword == 'package':
+        tabela_simbolos.definir_pacote(name)
+        p[0] = ('package', name, corpo if 'corpo' in locals() else [])
+    elif keyword == 'import':
+        p[0] = ('import', name)
+    elif keyword == 'genset':
+        elementos = corpo if 'corpo' in locals() and isinstance(corpo, list) else []
+        tabela_simbolos.inserir('gensets', name, {'elementos': elementos, 'modificadores': modificadores})
+        p[0] = ('genset', name, elementos)
+    else:
+        p[0] = ('reserved_stmt', keyword, name)
 
 def p_class_decl(p):
-    '''class_decl : class_header class_body
-                  | class_header'''
-    fechar_escopo()
-
+    '''class_decl : STEREOTYPE_CLASS CLASS_NAME SPECIALIZES CLASS_NAME class_body
+                  | STEREOTYPE_CLASS CLASS_NAME SPECIALIZES CLASS_NAME
+                  | CLASS_NAME SPECIALIZES CLASS_NAME class_body
+                  | CLASS_NAME SPECIALIZES CLASS_NAME
+                  | STEREOTYPE_CLASS CLASS_NAME class_body
+                  | CLASS_NAME class_body
+                  | STEREOTYPE_CLASS CLASS_NAME
+                  | CLASS_NAME'''
+    
+    if len(p) == 6:
+        st, nome, base, corpo = p[1], p[2], p[4], p[5]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': st, 'base': base, 'corpo': corpo})
+        p[0] = ('class_spec_body', st, nome, base, corpo)
+    elif len(p) == 5 and p.slice[3].type == 'SPECIALIZES':
+        st, nome, base = p[1], p[2], p[4]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': st, 'base': base, 'corpo': []})
+        p[0] = ('class_spec', st, nome, base)
+    elif len(p) == 5:
+        st, nome, corpo = p[1], p[2], p[4]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': st, 'corpo': corpo})
+        p[0] = ('class', st, nome)
+    elif len(p) == 4 and p.slice[2].type == 'SPECIALIZES':
+        nome, base = p[1], p[3]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': None, 'base': base, 'corpo': []})
+        p[0] = ('class_spec', None, nome, base)
+    elif len(p) == 4:
+        st, nome, corpo = p[1], p[2], p[3]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': st, 'corpo': corpo})
+        p[0] = ('class', st, nome)
+    elif len(p) == 3:
+        if p.slice[1].type == 'STEREOTYPE_CLASS':
+            st, nome = p[1], p[2]
+            tabela_simbolos.inserir('classes', nome, {'stereotype': st, 'corpo': []})
+            p[0] = ('class', st, nome)
+        else:
+            nome, corpo = p[1], p[2]
+            tabela_simbolos.inserir('classes', nome, {'stereotype': None, 'corpo': corpo})
+            p[0] = ('class', None, nome)
+    else:
+        nome = p[1]
+        tabela_simbolos.inserir('classes', nome, {'stereotype': None, 'corpo': []})
+        p[0] = ('class', None, nome)
 
 def p_class_body(p):
     '''class_body : LBRACE class_member_list RBRACE
                   | LBRACE RBRACE'''
-
+    p[0] = p[2] if len(p) == 4 else []
 
 def p_class_member_list(p):
     '''class_member_list : class_member_list class_member
                          | class_member'''
-
+    if len(p) == 3:
+        p[0] = (p[1] if isinstance(p[1], list) else [p[1]]) + [p[2]]
+    else:
+        p[0] = [p[1]]
 
 def p_class_member(p):
     '''class_member : attribute_decl
-                    | internal_relation'''
+                    | relation_decl
+                    | annotation_member'''
+    p[0] = p[1]
 
-
-# Atributos
 def p_attribute_decl(p):
-    '''attribute_decl : attr_name COLON type_ref opt_cardinality opt_meta'''
-    inserir(p[1], {'categoria': 'attribute', 'nome': p[1], 'tipo_dado': p[3],
-                   'cardinalidade': p[4], 'meta': p[5], 'linha': p.lineno(2)})
+    '''attribute_decl : RELATION_NAME COLON NATIVE_TYPE LBRACKET NUMBER RANGE cardinality_bound RBRACKET
+                      | RELATION_NAME COLON CLASS_NAME LBRACKET NUMBER RANGE cardinality_bound RBRACKET
+                      | RELATION_NAME COLON NATIVE_TYPE
+                      | RELATION_NAME COLON NEW_TYPE'''
+    tipo_alvo = p[3]
+    tabela_simbolos.inserir('relations', p[1], {'tipo': 'atributo', 'tipo_dado': tipo_alvo})
+    p[0] = ('attribute', p[1], tipo_alvo)
 
+# Suporte robusto para anotações ODP internas (ex: @mediation [1..*] -- [1..*] Role_Name1)[cite: 11, 12]
+def p_annotation_member(p):
+    '''annotation_member : AT STEREOTYPE_RELATION LBRACKET cardinality_content RBRACKET ASSOCIATION_LINE LBRACKET cardinality_content RBRACKET CLASS_NAME
+                         | AT STEREOTYPE_RELATION LBRACKET cardinality_content RBRACKET CLASS_NAME
+                         | AT STEREOTYPE_RELATION CLASS_NAME
+                         | AT STEREOTYPE_RELATION
+                         | AT RELATION_NAME LBRACKET cardinality_content RBRACKET ASSOCIATION_LINE LBRACKET cardinality_content RBRACKET CLASS_NAME
+                         | AT RELATION_NAME LBRACKET cardinality_content RBRACKET CLASS_NAME
+                         | AT RELATION_NAME CLASS_NAME
+                         | AT RELATION_NAME'''
+    p[0] = ('annotation', p[2])
 
-def p_attr_name(p):
-    '''attr_name : RELATION_NAME
-                 | NATIVE_TYPE'''
-    p[0] = p[1]
+def p_cardinality_content(p):
+    '''cardinality_content : NUMBER RANGE cardinality_bound
+                           | NUMBER
+                           | STAR'''
+    pass
 
-
-def p_type_ref(p):
-    '''type_ref : NATIVE_TYPE
-                | CLASS_NAME
-                | NEW_TYPE'''
-    p[0] = p[1]
-
-
-def p_opt_cardinality(p):
-    '''opt_cardinality : cardinality
-                       | empty'''
-    p[0] = p[1]
-
-
-def p_opt_meta(p):
-    '''opt_meta : LBRACE meta_list RBRACE
-                | empty'''
-    p[0] = p[2] if len(p) == 4 else []
-
-
-def p_meta_list(p):
-    '''meta_list : meta_list COMMA meta_item
-                 | meta_item'''
-    p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
-
-
-def p_meta_item(p):
-    '''meta_item : META_ATTRIBUTE
-                 | META_ATTRIBUTE RELATION_NAME'''
-    p[0] = p[1] if len(p) == 2 else f"{p[1]} {p[2]}"
-
-
-# Cardinalidades
-def p_cardinality(p):
-    '''cardinality : LBRACKET bound RBRACKET
-                   | LBRACKET bound RANGE bound RBRACKET'''
-    p[0] = p[2] if len(p) == 4 else f"{p[2]}..{p[4]}"
-
-
-def p_bound(p):
-    '''bound : NUMBER
-             | STAR'''
-    p[0] = str(p[1])
-
-
-# Relações
-def p_rel_symbol(p):
-    '''rel_symbol : REL_PLAIN
-                  | REL_BI_DIR
-                  | REL_UNI_DIR'''
-    p[0] = p[1]
-
-
-def p_rel_core(p):
-    '''rel_core : rel_symbol cardinality CLASS_NAME
-                | rel_symbol RELATION_NAME rel_symbol cardinality CLASS_NAME'''
-    if len(p) == 4:
-        p[0] = {'nome': None, 'card_origem': None, 'simbolo': p[1],
-                'card_alvo': p[2], 'alvo': p[3]}
+def p_relation_decl(p):
+    '''relation_decl : STEREOTYPE_RELATION RELATION_NAME class_body
+                     | STEREOTYPE_RELATION CLASS_NAME class_body
+                     | STEREOTYPE_RELATION RELATION_NAME LBRACKET NUMBER RANGE cardinality_bound RBRACKET COLON CLASS_NAME
+                     | STEREOTYPE_RELATION RELATION_NAME COLON CLASS_NAME
+                     | RELATION_NAME COLON CLASS_NAME
+                     | STEREOTYPE_RELATION RELATION_NAME ASSOCIATION_LINE RELATION_NAME ASSOCIATION_LINE CLASS_NAME
+                     | STEREOTYPE_RELATION RELATION_NAME CLASS_NAME ASSOCIATION_LINE RELATION_NAME ASSOCIATION_LINE CLASS_NAME'''
+    
+    if len(p) == 4 and isinstance(p[3], list):
+        st, rel, corpo = p[1], p[2], p[3]
+        tabela_simbolos.inserir('relations', rel, {'stereotype': st, 'corpo': corpo})
+        p[0] = ('relation_body', st, rel, corpo)
+    elif len(p) == 10:
+        st, rel, alvo = p[1], p[2], p[9]
+        tabela_simbolos.inserir('relations', rel, {'stereotype': st, 'alvo': alvo})
+        p[0] = ('relation', st, rel, alvo)
+    elif len(p) == 5:
+        st, rel, alvo = p[1], p[2], p[4]
+        tabela_simbolos.inserir('relations', rel, {'stereotype': st, 'alvo': alvo})
+        p[0] = ('relation', st, rel, alvo)
+    elif len(p) == 4:
+        rel, alvo = p[1], p[3]
+        tabela_simbolos.inserir('relations', rel, {'stereotype': None, 'alvo': alvo})
+        p[0] = ('relation', None, rel, alvo)
     else:
-        p[0] = {'nome': p[2], 'card_origem': None, 'simbolo': p[1],
-                'card_alvo': p[4], 'alvo': p[5]}
+        p[0] = ('relation_complex', p[1], p[2])
 
+# Suporte a relações globais anotadas (ex: @material relation Buyer [1..*] -- makesTransaction -- [1..*] Vendor)[cite: 11]
+def p_annotated_relation_decl(p):
+    '''annotated_relation_decl : AT STEREOTYPE_RELATION RELATION_NAME CLASS_NAME LBRACKET cardinality_content RBRACKET ASSOCIATION_LINE RELATION_NAME ASSOCIATION_LINE LBRACKET cardinality_content RBRACKET CLASS_NAME
+                               | AT STEREOTYPE_RELATION RELATION_NAME CLASS_NAME LBRACKET cardinality_content RBRACKET ASSOCIATION_LINE CLASS_NAME ASSOCIATION_LINE LBRACKET cardinality_content RBRACKET CLASS_NAME'''
+    st = p[2]
+    rel_nome = p[3]
+    tabela_simbolos.inserir('relations', rel_nome, {'stereotype': st})
+    p[0] = ('annotated_relation', st, rel_nome)
 
-def p_rel_tail(p):
-    '''rel_tail : cardinality rel_core
-                | rel_core'''
+def p_cardinality_bound(p):
+    '''cardinality_bound : NUMBER
+                         | STAR'''
+    p[0] = p[1]
+
+def p_class_list_genset(p):
+    '''class_list_genset : class_list_genset CLASS_NAME
+                         | CLASS_NAME'''
     if len(p) == 3:
-        p[2]['card_origem'] = p[1]
-        p[0] = p[2]
+        p[0] = (p[1] if isinstance(p[1], list) else [p[1]]) + [p[2]]
     else:
-        p[0] = p[1]
-
-
-# Relação interna (dentro de classe):
-def p_internal_relation(p):
-    '''internal_relation : AT STEREOTYPE_RELATION rel_tail
-                         | rel_core'''
-    origem = getattr(escopo_atual, 'nome', None)
-    if len(p) == 4:
-        inserir_relacao(p[3]['nome'], p[2], origem, p[3], False, p.lineno(2))
-    else:
-        inserir_relacao(p[1]['nome'], None, origem, p[1], False, p.lexer.lineno)
-
-
-# Relação externa:
-def p_external_relation(p):
-    '''external_relation : AT STEREOTYPE_RELATION RELATION CLASS_NAME rel_tail
-                         | RELATION CLASS_NAME rel_tail'''
-    if len(p) == 6:
-        est, origem, tail, linha = p[2], p[4], p[5], p.lineno(4)
-    else:
-        est, origem, tail, linha = None, p[2], p[3], p.lineno(2)
-    inserir_relacao(tail['nome'], est, origem, tail, True, linha)
-
-
-# Tipos de dados: datatype
-def p_datatype_header(p):
-    '''datatype_header : DATATYPE CLASS_NAME
-                       | DATATYPE NEW_TYPE'''
-    abrir_escopo(p[2], {'categoria': 'type', 'nome': p[2], 'linha': p.lineno(2)}, 'type')
-
+        p[0] = [p[1]]
 
 def p_type_decl(p):
-    '''type_decl : datatype_header datatype_body
-                 | datatype_header'''
-    fechar_escopo()
-
-
-def p_datatype_body(p):
-    '''datatype_body : LBRACE attribute_list RBRACE
-                     | LBRACE RBRACE'''
-
-
-def p_attribute_list(p):
-    '''attribute_list : attribute_list attribute_decl
-                      | attribute_decl'''
-
-
-def p_type_decl_simples(p):
     '''type_decl : NEW_TYPE'''
-    filho = escopo_atual.novo_escopo(p[1], 'type')
-    inserir(p[1], {'categoria': 'type', 'nome': p[1], 'linha': p.lineno(1), 'escopo': filho})
-
-
-# Classes enumeradas
-def p_instance_list(p):
-    '''instance_list : instance_list COMMA instance_item
-                     | instance_item'''
-    p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
-
-
-def p_instance_item(p):
-    '''instance_item : INSTANCE_NAME
-                     | CLASS_NAME'''
-    p[0] = p[1]
-
-
-def p_enum_decl(p):
-    '''enum_decl : ENUM CLASS_NAME LBRACE instance_list RBRACE'''
-    filho = escopo_atual.novo_escopo(p[2], 'enum')
-    inserir(p[2], {'categoria': 'enum', 'nome': p[2], 'linha': p.lineno(2), 'escopo': filho})
-    for v in p[4]:
-        filho.put(v, {'categoria': 'instance', 'nome': v, 'linha': p.lineno(2),
-                      'arquivo': estado['arquivo']})
-
-
-# Generalizações
-def p_genset_mods(p):
-    '''genset_mods : genset_mods GENSET_MOD
-                   | GENSET_MOD'''
-    p[0] = p[1] + [p[2]] if len(p) == 3 else [p[1]]
-
-
-def p_genset_head(p):
-    '''genset_head : GENSET CLASS_NAME
-                   | genset_mods GENSET CLASS_NAME'''
-    if len(p) == 3:
-        p[0] = ([], p[2], p.lineno(2))
-    else:
-        p[0] = (p[1], p[3], p.lineno(3))
-
-
-def p_genset_decl(p):
-    '''genset_decl : genset_head WHERE class_list SPECIALIZES CLASS_NAME
-                   | genset_head LBRACE GENERAL CLASS_NAME SPECIFICS class_list RBRACE'''
-    restricoes, nome, linha = p[1]
-    if len(p) == 6:
-        geral, especificos, forma = p[5], p[3], 'where'
-    else:
-        geral, especificos, forma = p[4], p[6], 'bloco'
-    # chave com prefixo para não colidir com a classe de mesmo nome
-    inserir(f"genset:{nome}", {'categoria': 'genset', 'nome': nome, 'geral': geral,
-                               'especificos': especificos, 'restricoes': restricoes,
-                               'forma': forma, 'linha': linha})
-
+    tabela_simbolos.inserir('types', p[1], {'base': 'custom'})
+    p[0] = ('new_type', p[1])
 
 def p_empty(p):
     '''empty :'''
-    p[0] = None
-
-
-# Tratamento de erros
-NOMES_TOKENS = {
-    'LBRACE': "'{'", 'RBRACE': "'}'", 'LBRACKET': "'['", 'RBRACKET': "']'",
-    'COMMA': "','", 'COLON': "':'", 'RANGE': "'..'", 'STAR': "'*'", 'AT': "'@'",
-    'REL_BI_DIR': "'<>--'", 'REL_UNI_DIR': "'--<>'", 'REL_PLAIN': "'--'",
-    'LPAREN': "'('", 'RPAREN': "')'",
-    'CLASS_NAME': 'um nome de classe (maiúscula inicial)',
-    'RELATION_NAME': 'um nome de atributo/relação (minúscula inicial)',
-    'INSTANCE_NAME': 'um nome de instância (termina em número)',
-    'NEW_TYPE': 'um tipo terminado em DataType', 'RESERVED_WORD': "'functional-complexes'",
-    'NUMBER': 'um número', 'NATIVE_TYPE': 'um tipo nativo',
-    'STEREOTYPE_CLASS': 'um estereótipo de classe',
-    'STEREOTYPE_RELATION': 'um estereótipo de relação',
-    'GENSET_MOD': 'disjoint/overlapping/complete/incomplete',
-    'META_ATTRIBUTE': 'um meta-atributo', '$end': 'fim do arquivo',
-    'PACKAGE': "'package'", 'IMPORT': "'import'", 'DATATYPE': "'datatype'",
-    'ENUM': "'enum'", 'RELATION': "'relation'", 'GENSET': "'genset'",
-    'SPECIALIZES': "'specializes'", 'WHERE': "'where'", 'GENERAL': "'general'",
-    'SPECIFICS': "'specifics'", 'OF': "'of'",
-}
-
-
-def _esperados():
-    """Tokens que o parser aceitaria no estado em que o erro ocorreu."""
-    try:
-        acoes = parser.action[parser.statestack[-1]]
-        return sorted({NOMES_TOKENS.get(t, t) for t in acoes})
-    except Exception:
-        return []
-
+    pass
 
 def p_error(p):
-    esperados = _esperados()
-    dica = f" Esperado: {', '.join(esperados)}." if esperados else ""
     if p:
-        linha, coluna = p.lineno, find_column(p)
-        msg = f"token inesperado '{p.value}' (tipo: {p.type})"
-        if escopo_atual is tabela_simbolos and p.type not in ('PACKAGE', 'IMPORT'):
-            sugestao = ("Todo modelo Tonto deve ter uma declaração de pacote "
-                        "(package Nome), opcionalmente precedida por imports.")
-        else:
-            sugestao = ("Verifique se a declaração está de acordo com a sintaxe Tonto "
-                        "(vírgulas em listas, cardinalidades entre colchetes, "
-                        "símbolos '--', '<>--' ou '--<>' nas relações)." + dica)
-        if any(e['arquivo'] == estado['arquivo'] and e['linha'] == linha
-               for e in lexico.erros_lexicos):
-            sugestao = ("Provável consequência de um erro léxico nesta mesma linha; "
-                        "corrija-o primeiro. ") + sugestao
+        msg = f"Erro sintático na linha {p.lineno}, posição {p.lexpos}: token inesperado '{p.value}' (tipo: {p.type})"
+        sugestao = "Verifique se a estrutura da classe, pacote ou relação está correta de acordo com a especificação da linguagem TONTO."
     else:
-        linha, coluna = lexer.lineno, None
-        msg = "fim inesperado do arquivo (EOF)"
-        sugestao = "Verifique se faltou alguma chave '}' de fechamento." + dica
-
-    erros_sintaticos.append({
-        'arquivo': estado['arquivo'], 'linha': linha, 'coluna': coluna,
-        'mensagem': msg, 'sugestao': sugestao,
-    })
+        msg = f"Erro sintático: Fim inesperado do arquivo (EOF)."
+        sugestao = "Verifique se faltaram chaves '}' de fechamento ou ponto e vírgula."
+    
+    erros_sintaticos.append({'mensagem': msg, 'sugestao': sugestao})
     raise ErroSintatico(msg)
 
-
-# Inicialização do parser
-parser = yacc.yacc(debug=False, write_tables=False)
+parser = yacc.yacc()

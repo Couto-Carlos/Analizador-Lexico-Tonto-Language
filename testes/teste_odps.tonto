@@ -1,0 +1,61 @@
+package CompleteOntologySystem {
+
+    // 1. Subkind Pattern Test
+    kind Person
+    subkind Man specializes Person
+    subkind Woman specializes Person
+
+    disjoint complete genset PersonGenderGenset {
+        general Person
+        specifics Man Woman
+    }
+
+    // 2. Role Pattern Test
+    kind Company
+    role Employee specializes Person
+    role Employer specializes Company
+
+    complete genset PersonRoleGenset {
+        general Person
+        specifics Employee
+    }
+
+    // 3. Phase Pattern Test
+    kind Student
+    phase UndergraduateStudent specializes Student
+    phase GraduateStudent specializes Student
+
+    disjoint complete genset StudentPhaseGenset {
+        general Student
+        specifics UndergraduateStudent GraduateStudent
+    }
+
+    // 4. Relator Pattern Test
+    kind Client
+    kind Supplier
+    role Buyer specializes Client
+    role Vendor specializes Supplier
+
+    relator CommercialContract {
+        @mediation [1..*] -- [1..*] Buyer
+        @mediation [1..*] -- [1..*] Vendor
+    }
+
+    @material relation Buyer [1..*] -- makesTransaction -- [1..*] Vendor
+
+    // 5. Mode Pattern Test
+    kind Asset
+    kind Owner
+    mode FinancialRisk {
+        @characterization [1..*] -- [1] Asset
+        @externalDependence [1..*] -- [1] Owner
+    }
+
+    // 6. RoleMixin Pattern Test
+    roleMixin LegalEntity
+
+    disjoint complete genset LegalEntityGenset {
+        general LegalEntity
+        specifics Buyer Vendor
+    }
+}
