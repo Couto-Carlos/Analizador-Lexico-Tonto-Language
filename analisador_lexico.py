@@ -3,100 +3,111 @@ import ply.lex as lex
 
 reserved = {
     # Estereótipos de Classe
-    'event': 'STEREOTYPE_CLASS', 
-    'situation': 'STEREOTYPE_CLASS', 
-    'process': 'STEREOTYPE_CLASS', 
-    'category': 'STEREOTYPE_CLASS', 
-    'mixin': 'STEREOTYPE_CLASS', 
-    'phaseMixin': 'STEREOTYPE_CLASS', 
-    'roleMixin': 'STEREOTYPE_CLASS', 
-    'historicalRoleMixin': 'STEREOTYPE_CLASS', 
-    'kind': 'STEREOTYPE_CLASS', 
-    'collective': 'STEREOTYPE_CLASS', 
-    'quantity': 'STEREOTYPE_CLASS', 
-    'quality': 'STEREOTYPE_CLASS', 
-    'mode': 'STEREOTYPE_CLASS', 
-    'intrisicMode': 'STEREOTYPE_CLASS', 
-    'extrinsicMode': 'STEREOTYPE_CLASS', 
-    'subkind': 'STEREOTYPE_CLASS', 
-    'phase': 'STEREOTYPE_CLASS', 
-    'role': 'STEREOTYPE_CLASS', 
+    'event': 'STEREOTYPE_CLASS',
+    'situation': 'STEREOTYPE_CLASS',
+    'process': 'STEREOTYPE_CLASS',
+    'category': 'STEREOTYPE_CLASS',
+    'mixin': 'STEREOTYPE_CLASS',
+    'phaseMixin': 'STEREOTYPE_CLASS',
+    'roleMixin': 'STEREOTYPE_CLASS',
+    'historicalRoleMixin': 'STEREOTYPE_CLASS',
+    'kind': 'STEREOTYPE_CLASS',
+    'collective': 'STEREOTYPE_CLASS',
+    'quantity': 'STEREOTYPE_CLASS',
+    'quality': 'STEREOTYPE_CLASS',
+    'mode': 'STEREOTYPE_CLASS',
+    'intrisicMode': 'STEREOTYPE_CLASS',
+    'extrinsicMode': 'STEREOTYPE_CLASS',
+    'subkind': 'STEREOTYPE_CLASS',
+    'phase': 'STEREOTYPE_CLASS',
+    'role': 'STEREOTYPE_CLASS',
     'historicalRole': 'STEREOTYPE_CLASS',
     'relator': 'STEREOTYPE_CLASS',
-    
+
     # Estereótipos de Relação
-    'material': 'STEREOTYPE_RELATION', 
-    'derivation': 'STEREOTYPE_RELATION', 
-    'comparative': 'STEREOTYPE_RELATION', 
-    'mediation': 'STEREOTYPE_RELATION', 
-    'characterization': 'STEREOTYPE_RELATION', 
-    'externalDependence': 'STEREOTYPE_RELATION', 
-    'componentOf': 'STEREOTYPE_RELATION', 
-    'memberOf': 'STEREOTYPE_RELATION', 
-    'subCollectionOf': 'STEREOTYPE_RELATION', 
-    'subQualityOf': 'STEREOTYPE_RELATION', 
-    'instantiation': 'STEREOTYPE_RELATION', 
-    'termination': 'STEREOTYPE_RELATION', 
-    'participational': 'STEREOTYPE_RELATION', 
-    'participation': 'STEREOTYPE_RELATION', 
-    'historicalDependence': 'STEREOTYPE_RELATION', 
-    'creation': 'STEREOTYPE_RELATION', 
-    'manifestation': 'STEREOTYPE_RELATION', 
-    'bringsAbout': 'STEREOTYPE_RELATION', 
-    'triggers': 'STEREOTYPE_RELATION', 
-    'composition': 'STEREOTYPE_RELATION', 
-    'aggregation': 'STEREOTYPE_RELATION', 
-    'inherence': 'STEREOTYPE_RELATION', 
-    'value': 'STEREOTYPE_RELATION', 
-    'formal': 'STEREOTYPE_RELATION', 
+    'material': 'STEREOTYPE_RELATION',
+    'derivation': 'STEREOTYPE_RELATION',
+    'comparative': 'STEREOTYPE_RELATION',
+    'mediation': 'STEREOTYPE_RELATION',
+    'characterization': 'STEREOTYPE_RELATION',
+    'externalDependence': 'STEREOTYPE_RELATION',
+    'componentOf': 'STEREOTYPE_RELATION',
+    'memberOf': 'STEREOTYPE_RELATION',
+    'subCollectionOf': 'STEREOTYPE_RELATION',
+    'subQualityOf': 'STEREOTYPE_RELATION',
+    'instantiation': 'STEREOTYPE_RELATION',
+    'termination': 'STEREOTYPE_RELATION',
+    'participational': 'STEREOTYPE_RELATION',
+    'participation': 'STEREOTYPE_RELATION',
+    'historicalDependence': 'STEREOTYPE_RELATION',
+    'creation': 'STEREOTYPE_RELATION',
+    'manifestation': 'STEREOTYPE_RELATION',
+    'bringsAbout': 'STEREOTYPE_RELATION',
+    'triggers': 'STEREOTYPE_RELATION',
+    'composition': 'STEREOTYPE_RELATION',
+    'aggregation': 'STEREOTYPE_RELATION',
+    'inherence': 'STEREOTYPE_RELATION',
+    'value': 'STEREOTYPE_RELATION',
+    'formal': 'STEREOTYPE_RELATION',
     'constitution': 'STEREOTYPE_RELATION',
 
-    'genset': 'RESERVED_WORD', 
-    'disjoint': 'RESERVED_WORD', 
-    'complete': 'RESERVED_WORD', 
-    'general': 'RESERVED_WORD', 
-    'specifics': 'RESERVED_WORD', 
-    'where': 'RESERVED_WORD', 
-    'package': 'RESERVED_WORD',
-    'import': 'RESERVED_WORD',
+    # Palavras-chave estruturais
+    'package': 'PACKAGE_KW',
+    'import': 'IMPORT_KW',
+    'datatype': 'DATATYPE_KW',
+    'enum': 'ENUM_KW',
+    'of': 'OF_KW',
     'specializes': 'SPECIALIZES',
+    'relation': 'RELATION_KW',
+    'genset': 'GENSET_KW',
+    'where': 'WHERE_KW',
+    'general': 'GENERAL_KW',
+    'specifics': 'SPECIFICS_KW',
+
+    # Modificadores de genset
+    'disjoint': 'GENSET_MOD',
+    'complete': 'GENSET_MOD',
+    'overlapping': 'GENSET_MOD',
+    'incomplete': 'GENSET_MOD',
+
+    # Outras palavras reservadas
     'functional-complexes': 'RESERVED_WORD',
 
-    'number': 'NATIVE_TYPE', 
-    'string': 'NATIVE_TYPE', 
-    'boolean': 'NATIVE_TYPE', 
-    'date': 'NATIVE_TYPE', 
-    'time': 'NATIVE_TYPE', 
+    # Tipos nativos
+    'number': 'NATIVE_TYPE',
+    'int': 'NATIVE_TYPE',
+    'string': 'NATIVE_TYPE',
+    'boolean': 'NATIVE_TYPE',
+    'date': 'NATIVE_TYPE',
+    'time': 'NATIVE_TYPE',
     'datetime': 'NATIVE_TYPE',
 
-    'ordered': 'META_ATTRIBUTE', 
-    'const': 'META_ATTRIBUTE', 
-    'derived': 'META_ATTRIBUTE', 
-    'subsets': 'META_ATTRIBUTE', 
+    # Meta-atributos
+    'ordered': 'META_ATTRIBUTE',
+    'const': 'META_ATTRIBUTE',
+    'derived': 'META_ATTRIBUTE',
+    'subsets': 'META_ATTRIBUTE',
     'redefines': 'META_ATTRIBUTE'
 }
 
 tokens = [
     'CLASS_NAME', 'RELATION_NAME', 'INSTANCE_NAME', 'NEW_TYPE',
-    'LBRACE', 'RBRACE', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
+    'LBRACE', 'RBRACE', 'LBRACKET', 'RBRACKET',
     'RANGE', 'REL_BI_DIR', 'REL_UNI_DIR', 'ASSOCIATION_LINE', 'STAR', 'AT', 'COLON',
-    'NUMBER', 'PACKAGE_SEPARATOR'
+    'NUMBER'
 ] + list(set(reserved.values()))
 
-t_PACKAGE_SEPARATOR = r'::-'
-t_LBRACE      = r'\{'
-t_RBRACE      = r'\}'
-t_LPAREN      = r'\('
-t_RPAREN      = r'\)'
-t_LBRACKET    = r'\['
-t_RBRACKET    = r'\]'
-t_RANGE       = r'\.\.'
-t_REL_BI_DIR  = r'<>--'
+t_LBRACE = r'\{'
+t_RBRACE = r'\}'
+t_LBRACKET = r'\['
+t_RBRACKET = r'\]'
+t_RANGE = r'\.\.'
+t_REL_BI_DIR = r'<>--'
 t_REL_UNI_DIR = r'--<>'
 t_ASSOCIATION_LINE = r'\-\-'
-t_STAR        = r'\*'
-t_AT          = r'@'
-t_COLON       = r':'
+t_STAR = r'\*'
+t_AT = r'@'
+t_COLON = r':'
 
 def t_NUMBER(t):
     r'\d+'

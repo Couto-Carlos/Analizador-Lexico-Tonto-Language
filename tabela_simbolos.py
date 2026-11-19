@@ -2,6 +2,9 @@
 
 class TabelaSimbolos:
     def __init__(self):
+        self.resetar()
+
+    def resetar(self):
         self.tabela = {
             'packages': {},
             'classes': {},
@@ -12,22 +15,29 @@ class TabelaSimbolos:
         }
         self.pacote_atual = "global"
 
-    def inserir(self, categoria, nome, dados):
-        """Insere um símbolo na categoria correspondente."""
+    def inserir(self, categoria, nome, dados, linha=None):
+        """Insere um símbolo na categoria correspondente com contexto de pacote e linha."""
         if categoria not in self.tabela:
             self.tabela[categoria] = {}
-        
-        dados['pacote'] = self.pacote_atual
-        self.tabela[categoria][nome] = dados
+
+        registro = dict(dados)
+        registro['pacote'] = self.pacote_atual
+        if linha is not None:
+            registro['linha'] = linha
+        self.tabela[categoria][nome] = registro
 
     def buscar(self, categoria, nome):
         """Busca um símbolo na tabela de dispersão."""
         return self.tabela.get(categoria, {}).get(nome, None)
 
-    def definir_pacote(self, nome_pacote):
+    def definir_pacote(self, nome_pacote, linha=None):
         self.pacote_atual = nome_pacote
         if nome_pacote not in self.tabela['packages']:
-            self.tabela['packages'][nome_pacote] = {'classes': [], 'relacoes': []}
+            self.tabela['packages'][nome_pacote] = {
+                'classes': [],
+                'relacoes': [],
+                'linha': linha
+            }
 
     def obter_resumo(self):
         """Retorna as contagens para a tabela de síntese."""
